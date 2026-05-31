@@ -1,0 +1,62 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Lint
+        run: ruff check .
+      - name: Test
+        run: pytest -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: npm run build
+
+  # Headless Claude Code review gate — runs the /review command on the diff.
+  # Requires the ANTHROPIC_API_KEY secret set in the repo settings.
+  claude-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Run headless review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude --print "Review the changes in this PR against the rules in \
+          CLAUDE.md. List any rule violations, missing tests, or uncited-claim \
+          risks. End with PASS or NEEDS-WORK." > review.txt
+          cat review.txt
+      - name: Post review as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-review
+          path: review.txt

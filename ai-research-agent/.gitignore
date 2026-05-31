@@ -1,0 +1,23 @@
+# secrets
+.env
+backend/.env
+frontend/.env
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# node
+node_modules/
+frontend/dist/
+
+# claude code local
+.claude/audit.log
+reports/
+
+# os
+.DS_Store
+Thumbs.db
